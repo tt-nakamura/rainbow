@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.special import airy
-from scipy.integrate import solve_ivp
 from Rainbow import Rainbow
 
 class AiryRainbow(Rainbow):

@@ -78,7 +78,7 @@ class Rainbow:
         pol = polarization state (0,1,2)
         assume 0 <= theta <= pi
         """
-        if hasattr(theta, '__len__'): # vectorize
+        if not np.isscalar(theta): # vectorize
             return np.asarray([self.intensity(th,pol) for th in theta])
 
         order = self.order(theta)
@@ -99,7 +99,7 @@ class Rainbow:
         r = radius of source (of disk shape) / radian
         return intensity smeared out by finite source size
         """
-        if hasattr(theta, '__len__'): # vectorize
+        if not np.isscalar(theta): # vectorize
             return np.asarray([self.averaged_intensity(th,pol,r)
                                for th in theta])
         r2 = r**2

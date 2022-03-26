@@ -23,7 +23,7 @@ plt.suptitle('interference fringes smeared out by finite source size', y=1)
 # primary rainbow
 theta = np.linspace(136*deg, 143*deg, 100)
 plt.subplot(1,2,2)
-for i,r in enumerate(rbow):
+for r in rbow:
     I = r.averaged_intensity(theta, 1)
     plt.plot(theta/deg, I)
 
@@ -35,7 +35,7 @@ plt.tick_params(axis='y', labelleft=False)
 # secondary rainbow
 theta = np.linspace(124*deg, 131*deg, 200)
 plt.subplot(1,2,1)
-for i,r in enumerate(rbow):
+for r in rbow:
     I = r.averaged_intensity(theta, 1)
     plt.plot(theta/deg, I)
 

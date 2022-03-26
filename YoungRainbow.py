@@ -26,7 +26,7 @@ class YoungRainbow(Rainbow):
         return sum of intensities of two rays (if two exist)
         pol = polarization state (see Rainbow.py)
         """
-        if hasattr(theta, '__len__'): # vectorize
+        if not np.isscalar(theta): # vectorize
             return np.asarray([self.intensity(th,pol) for th in theta])
 
         order = self.order(theta)
