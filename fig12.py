@@ -1,48 +1,66 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Rainbow import Rainbow
-from YoungRainbow import YoungRainbow
-from AiryRainbow import AiryRainbow
 from MieRainbow import MieRainbow
+from RefractiveIndex import WavlenFromIndex
+from scipy.constants import degree
 
-deg = np.pi/180
-m = 1.331 # refractive index
 a = 2e-4 # radius of raindrop / m
-l = 656.3e-9 # wavelength of red light / m
-label = ['Descartes', 'Young', 'Airy', 'Mie']
+m = [1.331, 1.333, 1.335, 1.337]# refractive index
+color = ['r', 'y', 'g', 'b']
 
-x = 2*np.pi*a/l
-rbow = [Rainbow(m),
-        YoungRainbow(m,x),
-        AiryRainbow(m,x),
-        MieRainbow(m,x)]
+l = WavlenFromIndex(m)# wavelength / m
+rbow = [MieRainbow(m, 2*np.pi*a/l) for m,l in zip(m,l)]
 
-plt.figure(figsize=(8, 3.5))
-plt.suptitle('interference fringes smeared out by finite source size', y=1)
+plt.figure(figsize=(5,8))
 
 # primary rainbow
-theta = np.linspace(136*deg, 143*deg, 100)
-plt.subplot(1,2,2)
-for r in rbow:
-    I = r.averaged_intensity(theta, 1)
-    plt.plot(theta/deg, I)
+theta = np.linspace(137, 142, 100)*degree
 
-plt.axis([136, 143, 0, 1.2])
-plt.legend(label)
-plt.xlabel(r'$\theta$ = angle between sun and raindrop')
-plt.tick_params(axis='y', labelleft=False)
+# perpendicular polarization
+plt.subplot(411)
+for i,r in enumerate(rbow):
+    I = r.intensity(theta, order=1, pol=1) # Debye Series
+    plt.plot(theta/degree, I, color[i])
+
+plt.axis([137, 142, 0, 1.2])
+plt.text(137, 1.2, '(a)  primary perpendicular', va='top')
+plt.ylabel('$I$ = intensity')
+
+# parallel polarization
+plt.subplot(412)
+for i,r in enumerate(rbow):
+    I = r.intensity(theta, order=1, pol=2) # Debye Series
+    plt.plot(theta/degree, I, color[i])
+
+plt.axis([137, 142, 0, 0.1])
+plt.text(137, 0.1, '(b)  primary parallel', va='top')
+plt.ylabel('$I$ = intensity')
 
 # secondary rainbow
-theta = np.linspace(124*deg, 131*deg, 200)
-plt.subplot(1,2,1)
-for r in rbow:
-    I = r.averaged_intensity(theta, 1)
-    plt.plot(theta/deg, I)
+theta = np.linspace(125, 130, 500)*degree
 
-plt.axis([124, 131, 0, 1.2])
-plt.legend(label)
-plt.xlabel(r'$\theta$ = angle between sun and raindrop')
-plt.ylabel('I = intensity of rainbow light')
+# perpendicular polarization
+plt.subplot(413)
+for i,r in enumerate(rbow):
+    I = r.intensity(theta, order=2, pol=1) # Debye Series
+    plt.plot(theta/degree, I, color[i])
+
+plt.axis([125, 130, 0, 0.2])
+plt.text(125, 0.2, '(c)  secondary perpendicular', va='top')
+plt.legend()
+plt.ylabel('$I$ = intensity')
+
+# parallel polarization
+plt.subplot(414)
+for i,r in enumerate(rbow):
+    I = r.intensity(theta, order=2, pol=2) # Debye Series
+    plt.plot(theta/degree, I, color[i])
+
+plt.axis([125, 130, 0, 0.03])
+plt.text(125, 0.03, '(d)  secondary parallel', va='top')
+plt.ylabel('$I$ = intensity')
+plt.xlabel(r'$\theta$ = angle between sun and raindrop / deg')
 
 plt.tight_layout()
-plt.show() # takes about a minute
+plt.savefig('fig12.eps')
+plt.show()

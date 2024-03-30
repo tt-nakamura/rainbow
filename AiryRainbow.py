@@ -4,43 +4,67 @@ from Rainbow import Rainbow
 
 class AiryRainbow(Rainbow):
     """ Airy theory of diffraction
-    reference: H. C. van de Hulst
-      "Light Scattering by Small Particles" section 13.2
+    references:
+      H. C. van de Hulst
+        "Light Scattering by Small Particles" section 13.2
+      G. P. Koennen and J. H. de Boer
+        "Polarlized Rainbow" Applied Optics 18 (1979) 1961
     """
     def __init__(self, m, x):
         """
-        m = refractive index of raindrop
-        x = 2pi*(radius of raindrop)/(wavelength of light)
+        m: float, scalar
+          refractive index of raindrop
+        x: float, scalar
+          2pi*(radius of raindrop)/(wavelength of light)
         """
         super().__init__(m)
-        # fringe width for primary and secondary rays
-        theta0 = ([3/4, 8/9]*np.sin(self.alpha_r)*x
-                  )**(1/3)/x/np.cos(self.alpha_r)
-        # Fresnel formula for vertical polarization
-        R1 = (np.sin(self.alpha_r - self.beta_r)
-              /np.sin(self.alpha_r + self.beta_r))**2
-        # Fresnel formula for parallel polarization
-        R2 = (np.tan(self.alpha_r - self.beta_r)
-              /np.tan(self.alpha_r + self.beta_r))**2
-        e1 = R1**[1,2]*(1-R1)**2
-        e2 = R2**[1,2]*(1-R2)**2
-        # reflection coeff for pol=0,1,2
-        e = np.c_[(e1+e2)/2, e1, e2].T
+        self.x = x
 
-        self.A = 2*np.pi*e*np.sin(self.alpha_r)/x/theta0**2
-        self.theta0 = theta0
-        self.theta1 = np.sum(self.theta_r)/2
-
-    def intensity(self, theta, pol=0):
+    def intensity(self, theta, order=1, pol=1):
         """ stationary phase approximation of Kirchhoff integral
-        theta = angle between sun and raindrop
-        pol = polarization state (0,1,2)
-        return Kirchhoff integral squared
+        theta: float, any shape
+          angle between sun and raindrop / radian
+        order: int, scalar
+          primary or secondary (1 or 2)
+        pol: int, scalar
+          polarization state (0,1,2)
+          0 for unpolarized light
+          1 for perpendicular polarization
+          2 for parallel polarization
+        return: I
+          I: float, same shape as theta
+            Kirchhoff integral squared
         """
-        A = self.A[pol]
-        t = np.expand_dims(theta,-1) # vectorize
-        x = ((self.theta_r - t)/self.theta0).T
-        p = theta >= self.theta1 # primary or secondary
-        A = np.where(p, A[0], A[1])
-        x = np.where(p, x[0],-x[1])
-        return A/np.sin(theta)*(airy(x)[0])**2
+        if   order==1: a = 3/4
+        elif order==2: a = 8/9
+        else: raise RuntimeError("bad order")
+
+        j = order - 1
+        alpha = self.alpha_r[j] # rainbow angle
+        beta = self.beta_r[j]
+        sa,ca = np.sin(alpha), np.cos(alpha)
+        tau = (a*sa*self.x)**(1/3)
+        theta0 = tau/self.x/ca # fringe width
+        if order==2: theta0 = -theta0
+        x = (self.theta_r[j] - theta)/theta0
+        Ai = airy(x)
+
+        if pol!=2: # perpendicular polarization
+            R = np.sin(alpha - beta)/np.sin(alpha + beta)
+            e = R**order * (1 - R**2)
+            I = (e * Ai[0])**2
+        else: I = 0
+
+        if pol!=1: # perpendicular polarization
+            R = np.tan(beta-alpha)/np.tan(alpha+beta)
+            e = R**order * (1 - R**2)
+            alpha_b = np.arctan(self.m) # Brewster angle
+            t = (alpha - alpha_b) * tau
+            if order==1: # Koennen and de Boer, eq(17)
+                J = Ai[0]**2 + (Ai[1]/t)**2
+            else:
+                J = ((1 - x/t**2)*Ai[0])**2 + (2*Ai[1]/t)**2
+            I += e**2 * J
+
+        if pol==0: I /= 2
+        return 2*np.pi*sa/self.x/theta0**2/np.sin(theta)*I

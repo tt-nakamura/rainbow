@@ -1,108 +1,153 @@
 import numpy as np
 from scipy.optimize import newton
-from scipy.integrate import quad
-
-SOLAR_RADIUS = 1919/2/3600/180*np.pi # radian
+from scipy.constants import arcsec
 
 class Rainbow:
     """ Descartes theory of geometric optics """
     def __init__(self, m):
-        """ m = refractive index of raindrop """
-        alpha_r = [np.arccos(np.sqrt((m*m-1)/3)), # primary
-                   np.arccos(np.sqrt((m*m-1)/8))] # secondary
-        beta_r = [np.arccos(2*np.sqrt((m*m-1)/3)/m),
-                  np.arccos(3*np.sqrt((m*m-1)/8)/m)]
-        theta_r = [2*alpha_r[0] - 4*beta_r[0] + np.pi,
-                   6*beta_r[1] - 2*alpha_r[1]]
-        theta_g = [2*np.pi - 4*np.arcsin(1/m),
-                   6*np.arcsin(1/m) - np.pi]
-        self.m = m
-        self.alpha_r = np.asarray(alpha_r) # rainbow angle of incidence
-        self.beta_r  = np.asarray(beta_r)  # rainbow angle of refraction
-        self.theta_r = np.asarray(theta_r) # rainbow angle of scattering
-        self.theta_g = np.asarray(theta_g) # grazing incidence
-
-    def order(self, theta):
-        """ return primary or sedondary (0 or 1)
-            for given scattenring angle theta
-            assume 0 <= theta <= pi
         """
-        if   theta > self.theta_r[0]: return 0
-        elif theta < self.theta_r[1]: return 1
-        else: return None
+        m: float, scalar
+          refractive index of raindrop
+        """
+        # rainbow angle of incidence for primary and secondary
+        a = np.arccos(np.sqrt((m*m-1)/np.r_[3,8]))
+        # rainbow angle of refraction
+        b = np.arcsin(np.sin(a)/m)
+        # rainbow angle of scattering
+        r = np.r_[2*a[0] - 4*b[0] + np.pi,
+                  6*b[1] - 2*a[1]]
+        # grazing incidence
+        g = np.r_[2*np.pi - 4*np.arcsin(1/m),
+                  6*np.arcsin(1/m) - np.pi]
+        self.m = m
+        self.alpha_r = a
+        self.beta_r = b
+        self.theta_r = r
+        self.theta_g = g
 
     def angle_of_incidence(self, theta, order, alpha=0):
         """
-        theta = angle between sun and raindrop / radian
-        order = primary or secondary (0 or 1)
-        alpha = initial guess for the angle of incidence / radian
-        return alpha = angle of incidence
-        assume 0 <= theta <= pi
+        theta: float, scalar
+          angle between sun and raindrop / radian
+          assume 0 <= theta <= pi
+        order: int, scalar
+          primary or secondary (1 or 2)
+        alpha: float, scalar
+          initial guess for the angle of incidence / radian
+        return: alpha
+          alpha: float, scalar
+            angle of incidence / radian
         """
-        if order==0:   beta = lambda x: (2*x + np.pi - theta)/4
-        elif order==1: beta = lambda x: (2*x + theta)/6
-        else: return None
-        d_beta = 1/(order+2)
+        if   order==1: beta = lambda x: (2*x + np.pi - theta)/4
+        elif order==2: beta = lambda x: (2*x + theta)/6
+        else: raise RuntimeError("bad order")
+        d_beta = 1/(order+1)
         return newton(lambda x: np.sin(x) - self.m*np.sin(beta(x)), alpha,
                       lambda x: np.cos(x) - self.m*np.cos(beta(x))*d_beta)
 
-    def ray_intensity(self, alpha, order, pol=0):
+    def ray_intensity(self, alpha, order, pol):
         """
-        alpha = angle of incidence / radian
-        order = primary or secondary (0 or 1)
-        pol = polarization state (0,1,2);
-              0 for no polarization
-              1 for vertical polarization
-              2 for parallel polarization
+        alpha: float, scalar
+          angle of incidence / radian
+        order: int, scalar
+          primary or secondary (1 or 2)
+        pol: int, scalar
+          polarization state (0,1,2);
+          0 for unpolarized light
+          1 for perpendicular polarization
+          2 for parallel polarization
+        return: I
+          I: float, scalar
+            intensity of outgoing ray
         """
         beta = np.arcsin(np.sin(alpha)/self.m)
         db_da = np.cos(alpha)/self.m/np.cos(beta)
-        if order==0:   gamma = 2*alpha - 4*beta + np.pi
-        elif order==1: gamma = 6*beta - 2*alpha
-        else: return None
-        dg_da = 2*(1 - (order+2)*db_da)
-        e = 0
-        if pol==0 or pol==1:# Fresnel formula for vertical polarization
-            R = (np.sin(alpha-beta)/np.sin(alpha+beta))**2
-            e += R**(order+1) * (1-R)**2
-        if pol==0 or pol==2:# Fresnel formula for parallel polarization
-            R = (np.tan(alpha-beta)/np.tan(alpha+beta))**2
-            e += R**(order+1) * (1-R)**2
-        if pol==0: e /= 2
-        return e*np.sin(2*alpha)/2/np.sin(gamma)/np.abs(dg_da)
+        if   order==1: gamma = 2*alpha - 4*beta + np.pi
+        elif order==2: gamma = 6*beta - 2*alpha
+        else: raise RuntimeError("bad order")
 
-    def intensity(self, theta, pol=0):
+        dg_da = 2*(1 - (order+1)*db_da)
+        if pol==1:# Fresnel formula for perpendicular polarization
+            R = np.sin(alpha-beta)/np.sin(alpha+beta)
+        elif pol==2:# Fresnel formula for parallel polarization
+            R = np.tan(beta-alpha)/np.tan(alpha+beta)
+        elif pol==0:
+            R = np.r_[np.sin(alpha-beta)/np.sin(alpha+beta),
+                      np.tan(beta-alpha)/np.tan(alpha+beta)]
+        e = np.mean((R**order * (1 - R**2))**2)
+        return e * np.sin(2*alpha)/2/np.sin(gamma)/np.abs(dg_da)
+
+    def intensity(self, theta, order=1, pol=0):
         """
-        theta = angle between sun and raindrop
-        return sum of intensities of two rays (if two exist)
-        pol = polarization state (0,1,2)
-        assume 0 <= theta <= pi
+        theta: float, any shape
+          angle between sun and raindrop / radian
+          assume 0 <= theta <= pi
+        order: int, scalar
+          primary or secondary (1 or 2)
+        pol: int, scalar
+          polarization state (0,1,2)
+        return: I
+          I: float, same shape as theta
+            sum of intensities of two rays (if two exist)
         """
         if not np.isscalar(theta): # vectorize
-            return np.asarray([self.intensity(th,pol) for th in theta])
+            t = np.asarray(theta)
+            I = [self.intensity(t, order, pol) for t in t.flat]
+            return np.reshape(I, t.shape)
 
-        order = self.order(theta)
-        if order is None: return 0
+        # Alexander's dark band
+        if((order==1 and theta <= self.theta_r[0]) or
+           (order==2 and theta >= self.theta_r[1])): return 0
 
         alpha = self.angle_of_incidence(theta, order)
         I = self.ray_intensity(alpha, order, pol)
-        if ((order==0 and theta <= self.theta_g[0]) or
-            (order==1 and theta >= self.theta_g[1])):
+
+        # additional ray
+        if((order==1 and theta <= self.theta_g[0]) or
+           (order==2 and theta >= self.theta_g[1])):
             alpha = self.angle_of_incidence(theta, order, np.pi/2)
             I += self.ray_intensity(alpha, order, pol)
+
         return I
 
-    def averaged_intensity(self, theta, pol=0, r=SOLAR_RADIUS):
+    SUN_RADIUS = 1919/2*arcsec # radian
+
+    def averaged_intensity(self, theta, order=1, pol=0,
+                           r=SUN_RADIUS, dx=1e-3):
+        """ intensity averaged over finite source size
+        theta: float, scalar or 1d-array
+          angle between sun and raindrop / radian
+        order: int, scalar
+          primary or secondary (1 or 2)
+        pol: int, scalar
+          polarization state (0,1,2)
+        r: float, scalar
+          radius of source (of disk shape) / radian
+          if r<dx, averaging is not performed
+        dx: float, scalar
+          step size of integration
+        return: I
+          I: float, same shape as theta
+            averaged intensity
         """
-        theta = angle between sun and raindrop / radian
-        pol = polarization state (0,1,2)
-        r = radius of source (of disk shape) / radian
-        return intensity smeared out by finite source size
-        """
-        if not np.isscalar(theta): # vectorize
-            return np.asarray([self.averaged_intensity(th,pol,r)
-                               for th in theta])
+        if r<dx: return self.intensity(theta, order ,pol)
+            
+        if not np.isscalar(theta):
+            dt = np.diff(theta)
+            if not np.allclose(dt, dt[0]):
+                raise RuntimeError('theta is not linspace')
+            N = int(np.ceil(dt[0]/dx))
+            dx = dt[0]/N
+            t = np.linspace(theta[0], theta[-1], N*len(dt) + 1)
+        else: t = [theta]
+
+        M = int(np.floor(r/dx))
         r2 = r**2
-        s = quad(lambda x: self.intensity(theta + x, pol)*np.sqrt(r2 - x**2),
-                 -r,r)[0] # smear out by integrating over disk surface
-        return s*2/np.pi/r2
+        x = dx*np.arange(-M, M+1)
+        w = np.sqrt(r2 - x**2)
+        t = np.r_[t[0] + x[:M], t, t[-1] + x[M+1:]]
+        I = self.intensity(t, order, pol)
+        I = np.convolve(I, w, 'valid') # fast averaging by convolution
+        if not np.isscalar(theta): I = I[::N]
+        else: I = np.squeeze(I)
+        return I*dx*2/np.pi/r2
