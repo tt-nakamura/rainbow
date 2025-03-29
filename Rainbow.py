@@ -77,24 +77,34 @@ class Rainbow:
         e = np.mean((R**order * (1 - R**2))**2)
         return e * np.sin(2*alpha)/2/np.sin(gamma)/np.abs(dg_da)
 
-    def intensity(self, theta, order=1, pol=0):
+    def intensity(self, theta, order=None, pol=0):
         """
         theta: float, any shape
           angle between sun and raindrop / radian
           assume 0 <= theta <= pi
         order: int, scalar
           primary or secondary (1 or 2)
+          if None, sum of primary and secondary is computed
         pol: int, scalar
           polarization state (0,1,2)
         return: I
           I: float, same shape as theta
             sum of intensities of two rays (if two exist)
         """
+        if order is None:
+            return (self.intensity(theta, 1, pol) +
+                    self.intensity(theta, 2, pol))
+
         if not np.isscalar(theta): # vectorize
             t = np.asarray(theta)
-            I = [self.intensity(t, order, pol) for t in t.flat]
+            I = [self._intensity(t, order, pol) for t in t.flat]
             return np.reshape(I, t.shape)
 
+        return self._intensity(theta, order, pol)
+
+    def _intensity(self, theta, order, pol):
+        """ same as self.intensity() except that
+        theta is scalar and order=1,2 """
         # Alexander's dark band
         if((order==1 and theta <= self.theta_r[0]) or
            (order==2 and theta >= self.theta_r[1])): return 0
@@ -112,7 +122,7 @@ class Rainbow:
 
     SUN_RADIUS = 1919/2*arcsec # radian
 
-    def averaged_intensity(self, theta, order=1, pol=0,
+    def averaged_intensity(self, theta, order=None, pol=0,
                            r=SUN_RADIUS, dx=1e-3):
         """ intensity averaged over finite source size
         theta: float, scalar or 1d-array
@@ -131,7 +141,7 @@ class Rainbow:
             averaged intensity
         """
         if r<dx: return self.intensity(theta, order ,pol)
-            
+
         if not np.isscalar(theta):
             dt = np.diff(theta)
             if not np.allclose(dt, dt[0]):

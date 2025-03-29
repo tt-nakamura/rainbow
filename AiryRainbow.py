@@ -20,12 +20,13 @@ class AiryRainbow(Rainbow):
         super().__init__(m)
         self.x = x
 
-    def intensity(self, theta, order=1, pol=1):
+    def intensity(self, theta, order=None, pol=0):
         """ stationary phase approximation of Kirchhoff integral
         theta: float, any shape
           angle between sun and raindrop / radian
         order: int, scalar
           primary or secondary (1 or 2)
+          if None, sum of primary and secondary is computed
         pol: int, scalar
           polarization state (0,1,2)
           0 for unpolarized light
@@ -35,6 +36,9 @@ class AiryRainbow(Rainbow):
           I: float, same shape as theta
             Kirchhoff integral squared
         """
+        if order is None:
+            return (self.intensity(theta, 1, pol) +
+                    self.intensity(theta, 2, pol))
         if   order==1: a = 3/4
         elif order==2: a = 8/9
         else: raise RuntimeError("bad order")
@@ -47,12 +51,12 @@ class AiryRainbow(Rainbow):
         theta0 = tau/self.x/ca # fringe width
         if order==2: theta0 = -theta0
         x = (self.theta_r[j] - theta)/theta0
-        Ai = airy(x)
+        Ai,Aip = airy(x)[:2]
 
         if pol!=2: # perpendicular polarization
             R = np.sin(alpha - beta)/np.sin(alpha + beta)
             e = R**order * (1 - R**2)
-            I = (e * Ai[0])**2
+            I = (e * Ai)**2
         else: I = 0
 
         if pol!=1: # perpendicular polarization
@@ -61,9 +65,9 @@ class AiryRainbow(Rainbow):
             alpha_b = np.arctan(self.m) # Brewster angle
             t = (alpha - alpha_b) * tau
             if order==1: # Koennen and de Boer, eq(17)
-                J = Ai[0]**2 + (Ai[1]/t)**2
+                J = Ai**2 + (Aip/t)**2
             else:
-                J = ((1 - x/t**2)*Ai[0])**2 + (2*Ai[1]/t)**2
+                J = ((1 - x/t**2)*Ai)**2 + (2*Aip/t)**2
             I += e**2 * J
 
         if pol==0: I /= 2

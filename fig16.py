@@ -36,7 +36,7 @@ img[18:] = np.tile(M, (5,1,1))
 
 plt.imshow(img)
 plt.text(0, 0, '(a)  primary perpendicular', va='bottom')
-plt.xticks(np.r_[0:N:7j], ('137','138','139','140','141','142','143'))
+plt.xticks(np.r_[0:N-1:7j], ('137','138','139','140','141','142','143'))
 plt.tick_params(left=False, labelleft=False)
 plt.box('off')
 
@@ -59,7 +59,7 @@ img[18:] = np.tile(M, (5,1,1))
 
 plt.imshow(img)
 plt.text(0, 0, '(b)  primary parallel', va='bottom')
-plt.xticks(np.r_[0:N:7j], ('137','138','139','140','141','142','143'))
+plt.xticks(np.r_[0:N-1:7j], ('137','138','139','140','141','142','143'))
 plt.tick_params(left=False, labelleft=False)
 plt.box('off')
 
@@ -85,7 +85,7 @@ img[18:] = np.tile(M, (5,1,1))
 
 plt.imshow(img)
 plt.text(0, 0, '(c)  secondary perpendicular', va='bottom')
-plt.xticks(np.r_[0:N:7j], ('124','125','126','127','128','129','130'))
+plt.xticks(np.r_[0:N-1:7j], ('124','125','126','127','128','129','130'))
 plt.tick_params(left=False, labelleft=False)
 plt.box('off')
 
@@ -108,7 +108,7 @@ img[18:] = np.tile(M, (5,1,1))
 
 plt.imshow(img)
 plt.text(0, 0, '(d)  secondary parallel', va='bottom')
-plt.xticks(np.r_[0:N:7j], ('124','125','126','127','128','129','130'))
+plt.xticks(np.r_[0:N-1:7j], ('124','125','126','127','128','129','130'))
 plt.tick_params(left=False, labelleft=False)
 plt.box('off')
 

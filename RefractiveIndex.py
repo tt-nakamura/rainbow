@@ -1,6 +1,6 @@
 # refrence:
 #   D. K. Lynch and W. Livingston
-#     "Color and Light in Nature" p117
+#     "Color and Light in Nature" 2nd edition, table 4.3
 
 from scipy.interpolate import interp1d
 

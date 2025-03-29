@@ -9,7 +9,8 @@ m = [1.331, 1.333, 1.335, 1.337]# refractive index
 color = ['r', 'y', 'g', 'b']
 
 l = WavlenFromIndex(m)# wavelength / m
-rbow = [MieRainbow(m, 2*np.pi*a/l) for m,l in zip(m,l)]
+rbow = [MieRainbow(m, 2*np.pi*a/l, ord_max=2)
+        for m,l in zip(m,l)]
 
 plt.figure(figsize=(5,8))
 

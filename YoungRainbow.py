@@ -66,12 +66,13 @@ class YoungRainbow(Rainbow):
         p = self.phase(alpha, order)
         return e*np.sqrt(complex(A))*np.exp(1j*p)
 
-    def intensity(self, theta, order=1, pol=0):
+    def intensity(self, theta, order=None, pol=0):
         """
         theta: float, any shape
           angle between sun and raindrop / radian
         order: int, scalar
           primary or secondary (1 or 2)
+          if None, sum of primary and secondary is computed
         pol: int, scalar
           polarization state (0,1,2);
           0 for unpolarized light
@@ -81,11 +82,20 @@ class YoungRainbow(Rainbow):
           I: float, same shape as theta
             sum of intensities of two rays (if two exist)
         """
+        if order is None:
+            return (self.intensity(theta, 1, pol) +
+                    self.intensity(theta, 2, pol)) 
+
         if not np.isscalar(theta): # vectorize
             t = np.asarray(theta)
-            I = [self.intensity(t, order, pol) for t in t.flat]
+            I = [self._intensity(t, order, pol) for t in t.flat]
             return np.reshape(I, t.shape)
 
+        return self._intensity(theta, order, pol)
+
+    def _intensity(self, theta, order, pol):
+        """ same as self.intensity() except that
+        theta is scalar and order=1,2 """
         if((order==1 and theta <= self.theta_r[0]) or
            (order==2 and theta >= self.theta_r[1])): return 0
         

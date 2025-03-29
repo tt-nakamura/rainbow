@@ -1,6 +1,8 @@
 import numpy as np
-from scipy.special import riccati_jn, riccati_yn, lpmn
+from scipy.special import riccati_yn, lpmn
+from riccati_jn import riccati_jn
 from Rainbow import Rainbow
+# scipy.special.riccati_jn doesn't work when x > 4400
 
 class MieRainbow(Rainbow):
     """ Mie theory of light scattering by spheres
@@ -10,22 +12,26 @@ class MieRainbow(Rainbow):
       E. A. Hovenac and J. A. Lock
         Journal of the Optical Society of America A9 (1992) 781
     """
-    def __init__(self, m, x, ord_max=2):
+    def __init__(self, m, x, ord_max=None):
         """
         m: float, scalar
           refractive index
         x: float, scalar
           2pi*(radius of raindrop)/(wavelength of light)
-        comment:
-          if x is too large (> 4400), this program doesn't work
-          (because riccati_jn returns nan)
         """
         y = m*x
         n = int(x + 4*x**(1/3) + 2.5)
+
         Jx,dJx = riccati_jn(n,x)
         Nx,dNx = riccati_yn(n,x)
         Jy,dJy = riccati_jn(n,y)
         Ny,dNy = riccati_yn(n,y)
+
+        Jx,dJx = Jx[1:], dJx[1:]
+        Nx,dNx = Nx[1:], dNx[1:]
+        Jy,dJy = Jy[1:], dJy[1:]
+        Ny,dNy = Ny[1:], dNy[1:]
+
         H1x = Jx + Nx*1j
         dH1x = dJx + dNx*1j
         a,b,c,d = Jx*dJy, dJx*Jy, H1x*dJy, dH1x*Jy
@@ -33,8 +39,8 @@ class MieRainbow(Rainbow):
 
         self.x = x
         self.n = n
-        self.a = a[1:]
-        self.b = b[1:]
+        self.a = a
+        self.b = b
 
         if ord_max is None: return
 
@@ -65,8 +71,8 @@ class MieRainbow(Rainbow):
         ap = np.vstack((1-R22a, ap))/2
         bp = np.vstack((1-R22b, bp))/2
 
-        self.ap = ap[:,1:]
-        self.bp = bp[:,1:]
+        self.ap = ap
+        self.bp = bp
 
     data = {'theta': np.array(0),
             'n_max': 0} # to save

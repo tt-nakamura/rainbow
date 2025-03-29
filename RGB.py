@@ -18,14 +18,12 @@ factor = [0.3, 1, 1, 0.3] # fading factor
 RGB = interp1d(wavlen0, (red, green, blue), fill_value=(0,0))
 F = interp1d(wavlen1, factor, fill_value=(0,0))
 
-def RGBFromWavlen(wavlen, gamma=0.8):
+def RGBFromWavlen(wavlen):
     """
     wavlen: float, any shape
       wavelength / m
-    gamma: float scalar
-      gamma correction
     return R,G,B:
       R,G,B: float, same shape as wavlen
         luminance (0 <= R,G,B <= 1)
     """
-    return (RGB(wavlen)*F(wavlen))**gamma
+    return RGB(wavlen)*F(wavlen)
